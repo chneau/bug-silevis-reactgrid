@@ -24,39 +24,42 @@ type Entity = {
 	startTime: Date;
 	endDate: Date;
 	endTime: Date;
+	startLocationIdIsOpen?: boolean;
+	endLocationIdIsOpen?: boolean;
 };
+console.log(dayjs(0).toDate());
 
 const getEntities = (): Entity[] => {
-	const datesAndTimes = {
-		startDate: dayjs().startOf("h").toDate(),
+	const datesAndTimes = () => ({
+		startDate: dayjs().startOf("d").toDate(),
 		startTime: dayjs().startOf("h").toDate(),
-		endDate: dayjs().startOf("h").add(1, "h").toDate(),
-		endTime: dayjs().startOf("h").add(1, "h").toDate(),
-	};
+		endDate: dayjs().add(2, "d").startOf("d").toDate(),
+		endTime: dayjs().add(2, "h").startOf("h").toDate(),
+	});
 	return [
 		{
 			name: "job",
 			startLocationId: "1",
 			endLocationId: "2",
-			...datesAndTimes,
+			...datesAndTimes(),
 		},
 		{
 			name: "good 1: 45x pipes",
 			startLocationId: "1",
 			endLocationId: "2",
-			...datesAndTimes,
+			...datesAndTimes(),
 		},
 		{
 			name: "leg 1: Collection",
 			startLocationId: "1",
 			endLocationId: "3",
-			...datesAndTimes,
+			...datesAndTimes(),
 		},
 		{
 			name: "leg 2: Delivery",
 			startLocationId: "3",
 			endLocationId: "2",
-			...datesAndTimes,
+			...datesAndTimes(),
 		},
 	];
 };
@@ -65,12 +68,16 @@ const getColumns = (): Column[] => [
 	{ columnId: "name", width: 300 },
 	{ columnId: "startLocationId", width: 150 },
 	{ columnId: "endLocationId", width: 150 },
-	{ columnId: "startDate", width: 80 },
-	{ columnId: "startTime", width: 80 },
-	{ columnId: "endDate", width: 80 },
-	{ columnId: "endTime", width: 80 },
+	{ columnId: "startDate", width: 110 },
+	{ columnId: "startTime", width: 90 },
+	{ columnId: "endDate", width: 110 },
+	{ columnId: "endTime", width: 90 },
 ];
 
+const timeFormat = new Intl.DateTimeFormat("en-GB", {
+	hour: "numeric",
+	minute: "numeric",
+});
 const getRows = (entities: Entity[]): Row[] => [
 	{
 		rowId: "header",
@@ -92,16 +99,18 @@ const getRows = (entities: Entity[]): Row[] => [
 				type: "dropdown",
 				selectedValue: entity.startLocationId,
 				values: getLocationOptions(),
+				isOpen: entity.startLocationIdIsOpen,
 			},
 			{
 				type: "dropdown",
 				selectedValue: entity.endLocationId,
 				values: getLocationOptions(),
+				isOpen: entity.endLocationIdIsOpen,
 			},
 			{ type: "date", date: entity.startDate },
-			{ type: "time", date: entity.startTime },
+			{ type: "time", time: entity.startTime, format: timeFormat },
 			{ type: "date", date: entity.endDate },
-			{ type: "time", date: entity.endTime },
+			{ type: "time", time: entity.endTime, format: timeFormat },
 		],
 	})),
 ];
@@ -110,14 +119,19 @@ const applyChanges = (changes: CellChange[], previous: any): Entity[] => {
 	for (const change of changes) {
 		const index = change.rowId;
 		const field = change.columnId;
-		if (change.newCell.type === "text") {
-			previous[index][field] = change.newCell.text;
-		} else if (change.newCell.type === "date") {
-			previous[index][field] = change.newCell.date;
-		} else if (change.newCell.type === "dropdown") {
-			previous[index][field] = change.newCell.selectedValue;
-		} else if (change.newCell.type === "time") {
-			previous[index][field] = change.newCell.time;
+		const newC = change.newCell;
+		const oldC = change.previousCell;
+		if (newC.type === "text") {
+			previous[index][field] = newC.text;
+		} else if (newC.type === "date") {
+			previous[index][field] = newC.date;
+		} else if (newC.type === "dropdown" && oldC.type === "dropdown") {
+			if (newC.selectedValue !== oldC.selectedValue)
+				previous[index][field] = newC.selectedValue;
+			if (newC.isOpen !== oldC.isOpen)
+				previous[index][`${field}IsOpen`] = newC.isOpen;
+		} else if (newC.type === "time") {
+			previous[index][field] = newC.time;
 		} else {
 			throw new Error("Invalid cell type");
 		}
