@@ -126,10 +126,12 @@ const applyChanges = (changes: CellChange[], previous: any): Entity[] => {
 		} else if (newC.type === "date") {
 			previous[index][field] = newC.date;
 		} else if (newC.type === "dropdown" && oldC.type === "dropdown") {
-			if (newC.selectedValue !== oldC.selectedValue)
+			if (newC.selectedValue !== oldC.selectedValue) {
 				previous[index][field] = newC.selectedValue;
-			if (newC.isOpen !== oldC.isOpen)
+			}
+			if (newC.isOpen !== oldC.isOpen) {
 				previous[index][`${field}IsOpen`] = newC.isOpen;
+			}
 		} else if (newC.type === "time") {
 			previous[index][field] = newC.time;
 		} else {
